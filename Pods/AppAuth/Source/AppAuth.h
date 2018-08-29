@@ -22,21 +22,42 @@
 #import "OIDAuthorizationRequest.h"
 #import "OIDAuthorizationResponse.h"
 #import "OIDAuthorizationService.h"
+#import "OIDAuthorizationUICoordinator.h"
 #import "OIDError.h"
 #import "OIDErrorUtilities.h"
 #import "OIDGrantTypes.h"
+#import "OIDRegistrationRequest.h"
+#import "OIDRegistrationResponse.h"
 #import "OIDResponseTypes.h"
 #import "OIDScopes.h"
+#import "OIDScopeUtilities.h"
 #import "OIDServiceConfiguration.h"
 #import "OIDServiceDiscovery.h"
 #import "OIDTokenRequest.h"
 #import "OIDTokenResponse.h"
+#import "OIDTokenUtilities.h"
 
-/*! @mainpage AppAuth for iOS
+#if TARGET_OS_TV
+#elif TARGET_OS_WATCH
+#elif TARGET_OS_IOS
+#import "OIDAuthState+IOS.h"
+#import "OIDAuthorizationService+IOS.h"
+#import "OIDAuthorizationUICoordinatorIOS.h"
+#elif TARGET_OS_MAC
+#import "OIDAuthState+Mac.h"
+#import "OIDAuthorizationService+Mac.h"
+#import "OIDAuthorizationUICoordinatorMac.h"
+#import "OIDRedirectHTTPHandler.h"
+#else
+#error "Platform Undefined"
+#endif
+
+
+/*! @mainpage AppAuth for iOS and macOS
 
     @section introduction Introduction
 
-    AppAuth for iOS is a client SDK for communicating with [OAuth 2.0]
+    AppAuth for iOS and macOS is a client SDK for communicating with [OAuth 2.0]
     (https://tools.ietf.org/html/rfc6749) and [OpenID Connect]
     (http://openid.net/specs/openid-connect-core-1_0.html) providers. It strives to
     directly map the requests and responses of those specifications, while following

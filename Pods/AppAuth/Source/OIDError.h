@@ -24,8 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
  */
 extern NSString *const OIDGeneralErrorDomain;
 
-/*! @var OIDOAuthAuthorizationErrorDomain
-    @brief The error domain for OAuth specific errors on the authorization endpoint.
+/*! @brief The error domain for OAuth specific errors on the authorization endpoint.
     @discussion This error domain is used when the server responds to an authorization request
         with an explicit OAuth error, as defined by RFC6749 Section 4.1.2.1. If the authorization
         response is invalid and not explicitly an error response, another error domain will be used.
@@ -36,8 +35,7 @@ extern NSString *const OIDGeneralErrorDomain;
  */
 extern NSString *const OIDOAuthAuthorizationErrorDomain;
 
-/*! @var OIDOAuthTokenErrorDomain
-    @brief The error domain for OAuth specific errors on the token endpoint.
+/*! @brief The error domain for OAuth specific errors on the token endpoint.
     @discussion This error domain is used when the server responds with HTTP 400 and an OAuth error,
         as defined RFC6749 Section 5.2. If an HTTP 400 response does not parse as an OAuth error
         (i.e. no 'error' field is present or the JSON is invalid), another error domain will be
@@ -50,37 +48,44 @@ extern NSString *const OIDOAuthAuthorizationErrorDomain;
  */
 extern NSString *const OIDOAuthTokenErrorDomain;
 
-/*! @var OIDResourceServerAuthorizationErrorDomain
-    @brief The error domain for authorization errors encountered out of band on the resource server.
+/*! @brief The error domain for dynamic client registration errors.
+    @discussion This error domain is used when the server responds with HTTP 400 and an OAuth error,
+         as defined in OpenID Connect Dynamic Client Registration 1.0 Section 3.3. If an HTTP 400
+         response does not parse as an OAuth error (i.e. no 'error' field is present or the JSON is
+         invalid), another error domain will be  used. The entire OAuth error response dictionary is
+         available in the \NSError_userInfo dictionary using the @c ::OIDOAuthErrorResponseErrorKey
+         key. Unlike transient network errors, errors in this domain invalidate the authentication
+         state, and indicates a client error.
+         The \NSError_code will be one of the @c ::OIDErrorCodeOAuthToken enum values.
+     @see https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+ */
+extern NSString *const OIDOAuthRegistrationErrorDomain;
+
+/*! @brief The error domain for authorization errors encountered out of band on the resource server.
  */
 extern NSString *const OIDResourceServerAuthorizationErrorDomain;
 
-/*! @var OIDHTTPErrorDomain
-    @brief An error domain representing received HTTP errors.
+/*! @brief An error domain representing received HTTP errors.
  */
 extern NSString *const OIDHTTPErrorDomain;
 
-/*! @var OIDOAuthErrorResponseErrorKey
-    @brief An error key for the original OAuth error response (if any).
+/*! @brief An error key for the original OAuth error response (if any).
  */
 extern NSString *const OIDOAuthErrorResponseErrorKey;
 
-/*! @var kOAuthErrorResponseErrorField
-    @brief The key of the 'error' response field in a RFC6749 Section 5.2 response.
+/*! @brief The key of the 'error' response field in a RFC6749 Section 5.2 response.
     @remark error
     @see https://tools.ietf.org/html/rfc6749#section-5.2
  */
 extern NSString *const OIDOAuthErrorFieldError;
 
-/*! @var kOAuthErrorResponseErrorDescriptionField
-    @brief The key of the 'error_description' response field in a RFC6749 Section 5.2 response.
+/*! @brief The key of the 'error_description' response field in a RFC6749 Section 5.2 response.
     @remark error_description
     @see https://tools.ietf.org/html/rfc6749#section-5.2
  */
 extern NSString *const OIDOAuthErrorFieldErrorDescription;
 
-/*! @var kOAuthErrorResponseErrorURIField
-    @brief The key of the 'error_uri' response field in a RFC6749 Section 5.2 response.
+/*! @brief The key of the 'error_uri' response field in a RFC6749 Section 5.2 response.
     @remark error_uri
     @see https://tools.ietf.org/html/rfc6749#section-5.2
  */
@@ -121,6 +126,24 @@ typedef NS_ENUM(NSInteger, OIDErrorCode) {
           request in mobile Safari.
    */
   OIDErrorCodeSafariOpenError = -9,
+
+  /*! @brief @c NSWorkspace.openURL returned NO when attempting to open the authorization
+          request in the default browser.
+   */
+  OIDErrorCodeBrowserOpenError = -10,
+
+  /*! @brief Indicates a problem when trying to refresh the tokens.
+   */
+  OIDErrorCodeTokenRefreshError = -11,
+
+  /*! @brief Indicates a problem occurred constructing the registration response from the JSON.
+   */
+  OIDErrorCodeRegistrationResponseConstructionError = -12,
+
+  /*! @brief Indicates a problem occurred deserializing the response/JSON.
+   */
+  OIDErrorCodeJSONSerializationError = -13,
+
 };
 
 /*! @brief Enum of all possible OAuth error codes as defined by RFC6749
@@ -185,6 +208,16 @@ typedef NS_ENUM(NSInteger, OIDErrorCodeOAuth) {
       @see https://tools.ietf.org/html/rfc6749#section-5.2
    */
   OIDErrorCodeOAuthUnsupportedGrantType = -11,
+
+  /*! @remarks invalid_redirect_uri
+      @see https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+   */
+  OIDErrorCodeOAuthInvalidRedirectURI = -12,
+
+  /*! @remarks invalid_client_metadata
+      @see https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+   */
+  OIDErrorCodeOAuthInvalidClientMetadata = -13,
 
   /*! @brief An authorization error occurring on the client rather than the server. For example,
         due to a state mismatch or misconfiguration. Should be treated as an unrecoverable
@@ -307,9 +340,40 @@ typedef NS_ENUM(NSInteger, OIDErrorCodeOAuthToken) {
   OIDErrorCodeOAuthTokenOther = OIDErrorCodeOAuthOther,
 };
 
+/*! @brief The error codes for the @c ::OIDOAuthRegistrationErrorDomain error domain
+    @see https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+ */
+typedef NS_ENUM(NSInteger, OIDErrorCodeOAuthRegistration) {
+  /*! @remarks invalid_request
+      @see http://tools.ietf.org/html/rfc6750#section-3.1
+   */
+  OIDErrorCodeOAuthRegistrationInvalidRequest = OIDErrorCodeOAuthInvalidRequest,
 
-/*! @var OIDOAuthExceptionInvalidAuthorizationFlow
-    @brief The exception text for the exception which occurs when a
+  /*! @remarks invalid_redirect_uri
+      @see https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+   */
+  OIDErrorCodeOAuthRegistrationInvalidRedirectURI = OIDErrorCodeOAuthInvalidRedirectURI,
+
+  /*! @remarks invalid_client_metadata
+      @see https://openid.net/specs/openid-connect-registration-1_0.html#RegistrationError
+   */
+  OIDErrorCodeOAuthRegistrationInvalidClientMetadata = OIDErrorCodeOAuthInvalidClientMetadata,
+
+  /*! @brief An unrecoverable token error occurring on the client rather than the server.
+   */
+  OIDErrorCodeOAuthRegistrationClientError = OIDErrorCodeOAuthClientError,
+
+  /*! @brief A registration endpoint OAuth error not known to this library
+      @discussion this indicates an OAuth error, but the error code was not in our
+          list. It could be a custom error code, or one from an OAuth extension. See the "error" key
+          of the \NSError_userInfo property. We assume such errors are not transient.
+      @see https://tools.ietf.org/html/rfc6749#section-5.2
+   */
+  OIDErrorCodeOAuthRegistrationOther = OIDErrorCodeOAuthOther,
+};
+
+
+/*! @brief The exception text for the exception which occurs when a
         @c OIDAuthorizationFlowSession receives a message after it has already completed.
  */
 extern NSString *const OIDOAuthExceptionInvalidAuthorizationFlow;

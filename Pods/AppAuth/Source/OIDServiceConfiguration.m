@@ -22,18 +22,19 @@
 #import "OIDErrorUtilities.h"
 #import "OIDServiceDiscovery.h"
 
-/*! @var kAuthorizationEndpointKey
-    @brief The key for the @c authorizationEndpoint property.
+/*! @brief The key for the @c authorizationEndpoint property.
  */
 static NSString *const kAuthorizationEndpointKey = @"authorizationEndpoint";
 
-/*! @var kTokenEndpointKey
-    @brief The key for the @c tokenEndpoint property.
+/*! @brief The key for the @c tokenEndpoint property.
  */
 static NSString *const kTokenEndpointKey = @"tokenEndpoint";
 
-/*! @var kDiscoveryDocumentKey
-    @brief The key for the @c discoveryDocument property.
+/*! @brief The key for the @c registrationEndpoint property.
+ */
+static NSString *const kRegistrationEndpointKey = @"registrationEndpoint";
+
+/*! @brief The key for the @c discoveryDocument property.
  */
 static NSString *const kDiscoveryDocumentKey = @"discoveryDocument";
 
@@ -41,41 +42,64 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface OIDServiceConfiguration ()
 
-- (nullable instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
-        tokenEndpoint:(NSURL *)tokenEndpoint
-    discoveryDocument:(nullable OIDServiceDiscovery *)discoveryDocument
-    NS_DESIGNATED_INITIALIZER;
+- (instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
+                                tokenEndpoint:(NSURL *)tokenEndpoint
+                         registrationEndpoint:(nullable NSURL *)registrationEndpoint
+                            discoveryDocument:(nullable OIDServiceDiscovery *)discoveryDocument
+                            NS_DESIGNATED_INITIALIZER;
 
 @end
 
 @implementation OIDServiceConfiguration
 
-- (nullable instancetype)init
-    OID_UNAVAILABLE_USE_INITIALIZER(@selector(initWithAuthorizationEndpoint:tokenEndpoint:));
+@synthesize authorizationEndpoint = _authorizationEndpoint;
+@synthesize tokenEndpoint = _tokenEndpoint;
+@synthesize registrationEndpoint = _registrationEndpoint;
+@synthesize discoveryDocument = _discoveryDocument;
 
-- (nullable instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
+- (instancetype)init
+    OID_UNAVAILABLE_USE_INITIALIZER(@selector(
+        initWithAuthorizationEndpoint:
+                       tokenEndpoint:
+                registrationEndpoint:)
+    );
+
+- (instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
         tokenEndpoint:(NSURL *)tokenEndpoint
+ registrationEndpoint:(nullable NSURL *)registrationEndpoint
     discoveryDocument:(nullable OIDServiceDiscovery *)discoveryDocument {
 
   self = [super init];
   if (self) {
     _authorizationEndpoint = [authorizationEndpoint copy];
     _tokenEndpoint = [tokenEndpoint copy];
+    _registrationEndpoint = [registrationEndpoint copy];
     _discoveryDocument = [discoveryDocument copy];
   }
   return self;
 }
 
-- (nullable instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
-                                         tokenEndpoint:(NSURL *)tokenEndpoint {
+- (instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
+                                tokenEndpoint:(NSURL *)tokenEndpoint {
   return [self initWithAuthorizationEndpoint:authorizationEndpoint
                                tokenEndpoint:tokenEndpoint
+                        registrationEndpoint:nil
                            discoveryDocument:nil];
 }
 
-- (nullable instancetype)initWithDiscoveryDocument:(OIDServiceDiscovery *) discoveryDocument {
+- (instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
+                                tokenEndpoint:(NSURL *)tokenEndpoint
+                         registrationEndpoint:(nullable NSURL *)registrationEndpoint {
+  return [self initWithAuthorizationEndpoint:authorizationEndpoint
+                               tokenEndpoint:tokenEndpoint
+                        registrationEndpoint:registrationEndpoint
+                           discoveryDocument:nil];
+}
+
+- (instancetype)initWithDiscoveryDocument:(OIDServiceDiscovery *) discoveryDocument {
   return [self initWithAuthorizationEndpoint:discoveryDocument.authorizationEndpoint
                                tokenEndpoint:discoveryDocument.tokenEndpoint
+                        registrationEndpoint:discoveryDocument.registrationEndpoint
                            discoveryDocument:discoveryDocument];
 }
 
@@ -100,6 +124,8 @@ NS_ASSUME_NONNULL_BEGIN
                                                         forKey:kAuthorizationEndpointKey];
   NSURL *tokenEndpoint = [aDecoder decodeObjectOfClass:[NSURL class]
                                                 forKey:kTokenEndpointKey];
+  NSURL *registrationEndpoint = [aDecoder decodeObjectOfClass:[NSURL class]
+                                                       forKey:kRegistrationEndpointKey];
   // We don't accept nil authorizationEndpoints or tokenEndpoints.
   if (!authorizationEndpoint || !tokenEndpoint) {
     return nil;
@@ -110,12 +136,14 @@ NS_ASSUME_NONNULL_BEGIN
 
   return [self initWithAuthorizationEndpoint:authorizationEndpoint
                                tokenEndpoint:tokenEndpoint
+                        registrationEndpoint:registrationEndpoint
                            discoveryDocument:discoveryDocument];
 }
 
 - (void)encodeWithCoder:(NSCoder *)aCoder {
   [aCoder encodeObject:_authorizationEndpoint forKey:kAuthorizationEndpointKey];
   [aCoder encodeObject:_tokenEndpoint forKey:kTokenEndpointKey];
+  [aCoder encodeObject:_registrationEndpoint forKey:kRegistrationEndpointKey];
   [aCoder encodeObject:_discoveryDocument forKey:kDiscoveryDocumentKey];
 }
 
@@ -124,9 +152,10 @@ NS_ASSUME_NONNULL_BEGIN
 - (NSString *)description {
   return [NSString stringWithFormat:
       @"OIDServiceConfiguration authorizationEndpoint: %@, tokenEndpoint: %@, "
-          "discoveryDocument: [%@]",
+          "registrationEndpoint: %@, discoveryDocument: [%@]",
       _authorizationEndpoint,
       _tokenEndpoint,
+      _registrationEndpoint,
       _discoveryDocument];
 }
 

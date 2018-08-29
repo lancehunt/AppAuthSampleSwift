@@ -20,19 +20,13 @@
 
 BOOL gOIDURLQueryComponentForceIOS7Handling = NO;
 
-/*! @var kQueryStringParamAdditionalDisallowedCharacters
-    @brief String representing the set of characters that are valid for the URL query
+/*! @brief String representing the set of characters that are valid for the URL query
         (per @ NSCharacterSet.URLQueryAllowedCharacterSet), but are disallowed in URL query
         parameters and values.
  */
-static NSString *const kQueryStringParamAdditionalDisallowedCharacters = @"=&";
+static NSString *const kQueryStringParamAdditionalDisallowedCharacters = @"=&+";
 
-@implementation OIDURLQueryComponent {
-  /*! @var _parameters
-      @brief A dictionary of parameter names and values representing the contents of the query.
-   */
-  NSMutableDictionary<NSString *, NSMutableArray<NSString *> *> *_parameters;
-}
+@implementation OIDURLQueryComponent
 
 - (nullable instancetype)init {
   self = [super init];
@@ -110,8 +104,7 @@ static NSString *const kQueryStringParamAdditionalDisallowedCharacters = @"=&";
   }
 }
 
-/*! @fn queryItems
-    @brief Builds a query items array that can be set to @c NSURLComponents.queryItems
+/*! @brief Builds a query items array that can be set to @c NSURLComponents.queryItems
     @discussion The parameter names and values are NOT URL encoded.
     @return An array of unencoded @c NSURLQueryItem objects.
  */
@@ -127,17 +120,18 @@ static NSString *const kQueryStringParamAdditionalDisallowedCharacters = @"=&";
   return queryParameters;
 }
 
-/*! @fn queryString
-    @brief Builds a query string that can be set to @c NSURLComponents.percentEncodedQuery
-    @discussion This string is percentage encoded, and shouldn't be used with
+/*! @brief Builds a query string that can be set to @c NSURLComponents.percentEncodedQuery
+    @discussion This string is percent encoded, and shouldn't be used with
         @c NSURLComponents.query.
     @return An percentage encoded query string.
  */
-- (NSString *)queryString {
+- (NSString *)percentEncodedQueryString {
   NSMutableArray<NSString *> *parameterizedValues = [NSMutableArray array];
 
+  // Starts with the standard URL-allowed character set.
   NSMutableCharacterSet *allowedParamCharacters =
       [[NSCharacterSet URLQueryAllowedCharacterSet] mutableCopy];
+  // Removes additional characters we don't want to see in the query component.
   [allowedParamCharacters removeCharactersInString:kQueryStringParamAdditionalDisallowedCharacters];
 
   for (NSString *parameterName in _parameters.allKeys) {
@@ -163,29 +157,37 @@ static NSString *const kQueryStringParamAdditionalDisallowedCharacters = @"=&";
   if (!gOIDURLQueryComponentForceIOS7Handling && [NSURLQueryItem class]) {
     NSURLComponents *components = [[NSURLComponents alloc] init];
     components.queryItems = [self queryItems];
-    return components.query;
+    NSString *encodedQuery = components.percentEncodedQuery;
+    // NSURLComponents.percentEncodedQuery creates a validly escaped URL query component, but
+    // doesn't encode the '+' leading to potential ambiguity with application/x-www-form-urlencoded
+    // encoding. Percent encodes '+' to avoid this ambiguity.
+    encodedQuery = [encodedQuery stringByReplacingOccurrencesOfString:@"+" withString:@"%2B"];
+    return encodedQuery;
   }
 
   // else, falls back to building query string manually (iOS 7)
-  return [self queryString];
+  return [self percentEncodedQueryString];
 }
 
 - (NSURL *)URLByReplacingQueryInURL:(NSURL *)URL {
   NSURLComponents *components =
       [NSURLComponents componentsWithURL:URL resolvingAgainstBaseURL:NO];
 
-  // If NSURLQueryItem is available, use it for constructing the new URL. (iOS 8+)
-  if (!gOIDURLQueryComponentForceIOS7Handling && [NSURLQueryItem class]) {
-    NSMutableArray<NSURLQueryItem *> *queryItems = [self queryItems];
-    components.queryItems = queryItems;
-  } else {
-    // Fallback for iOS 7
-    NSString *queryString = [self queryString];
-    components.percentEncodedQuery = queryString;
-  }
+  // Replaces encodedQuery component
+  NSString *queryString = [self URLEncodedParameters];
+  components.percentEncodedQuery = queryString;
 
   NSURL *URLWithParameters = components.URL;
   return URLWithParameters;
+}
+
+#pragma mark - NSObject overrides
+
+- (NSString *)description {
+  return [NSString stringWithFormat:@"<%@: %p, parameters: %@>",
+                                    NSStringFromClass([self class]),
+                                    self,
+                                    _parameters];
 }
 
 @end

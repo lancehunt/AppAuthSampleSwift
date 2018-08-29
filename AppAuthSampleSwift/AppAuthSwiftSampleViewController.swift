@@ -8,6 +8,30 @@
 
 import UIKit
 import AppAuth
+// FIXME: comparison operators with optionals were removed from the Swift Standard Libary.
+// Consider refactoring the code to use the non-optional operators.
+fileprivate func < <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l < r
+  case (nil, _?):
+    return true
+  default:
+    return false
+  }
+}
+
+// FIXME: comparison operators with optionals were removed from the Swift Standard Libary.
+// Consider refactoring the code to use the non-optional operators.
+fileprivate func > <T : Comparable>(lhs: T?, rhs: T?) -> Bool {
+  switch (lhs, rhs) {
+  case let (l?, r?):
+    return l > r
+  default:
+    return rhs < lhs
+  }
+}
+
 
 class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthStateErrorDelegate {
     
@@ -71,18 +95,18 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
         assert(kRedirectURI != "com.googleusercontent.apps.YOUR_CLIENT:/oauthredirect","Update kRedirectURI with your own redirect URI. Instructions: https://github.com/openid/AppAuth-iOS/blob/master/Example/README.md")
         
         // verifies that the custom URI scheme has been updated in the Info.plist
-        let urlTypes = NSBundle.mainBundle().objectForInfoDictionaryKey("CFBundleURLTypes") as? NSArray
+        let urlTypes = Bundle.main.object(forInfoDictionaryKey: "CFBundleURLTypes") as? NSArray
         assert(urlTypes != nil && urlTypes?.count > 0, "No custom URI scheme has been configured for the project.")
-        let urlSchemes = (urlTypes!.objectAtIndex(0) as! NSDictionary).objectForKey("CFBundleURLSchemes") as? NSArray
+        let urlSchemes = (urlTypes!.object(at: 0) as! NSDictionary).object(forKey: "CFBundleURLSchemes") as? NSArray
         assert(urlSchemes != nil && urlSchemes?.count > 0,"No custom URI scheme has been configured for the project.")
-        let urlScheme = urlSchemes!.objectAtIndex(0) as? NSString
+        let urlScheme = urlSchemes!.object(at: 0) as? NSString
         
         assert(urlScheme != "com.googleusercontent.apps.YOUR_CLIENT","Configure the URI scheme in Info.plist (URL Types -> Item 0 -> URL Schemes -> Item 0) with the scheme of your redirect URI. Full instructions: https://github.com/openid/AppAuth-iOS/blob/master/Example/README.md")
         
-        logTextView.layer.borderColor = UIColor(white: 0.8, alpha: 1.0).CGColor
+        logTextView.layer.borderColor = UIColor(white: 0.8, alpha: 1.0).cgColor
         logTextView.layer.borderWidth = 1.0
         logTextView.alwaysBounceVertical = true
-        logTextView.textContainer.lineBreakMode = .ByCharWrapping
+        logTextView.textContainer.lineBreakMode = .byCharWrapping
         logTextView.text = ""
         
         self.loadState()
@@ -95,13 +119,13 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     func saveState(){
         // for production usage consider using the OS Keychain instead
         if authState != nil{
-            let archivedAuthState = NSKeyedArchiver.archivedDataWithRootObject(authState!)
-            NSUserDefaults.standardUserDefaults().setObject(archivedAuthState, forKey: kAppAuthExampleAuthStateKey)
+            let archivedAuthState = NSKeyedArchiver.archivedData(withRootObject: authState!)
+            UserDefaults.standard.set(archivedAuthState, forKey: kAppAuthExampleAuthStateKey)
         }
         else{
-            NSUserDefaults.standardUserDefaults().setObject(nil, forKey: kAppAuthExampleAuthStateKey)
+            UserDefaults.standard.set(nil, forKey: kAppAuthExampleAuthStateKey)
         }
-        NSUserDefaults.standardUserDefaults().synchronize()
+        UserDefaults.standard.synchronize()
     }
     
     /*! @fn loadState
@@ -109,16 +133,16 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      */
     func loadState(){
         // loads OIDAuthState from NSUSerDefaults
-        guard let archivedAuthState = NSUserDefaults.standardUserDefaults().objectForKey(kAppAuthExampleAuthStateKey) as? NSData else{
+        guard let archivedAuthState = UserDefaults.standard.object(forKey: kAppAuthExampleAuthStateKey) as? Data else{
             return
         }
-        guard let authState = NSKeyedUnarchiver.unarchiveObjectWithData(archivedAuthState) as? OIDAuthState else{
+        guard let authState = NSKeyedUnarchiver.unarchiveObject(with: archivedAuthState) as? OIDAuthState else{
             return
         }
         assignAuthState(authState)
     }
     
-    func assignAuthState(authState:OIDAuthState?){
+    func assignAuthState(_ authState:OIDAuthState?){
         self.authState = authState
         self.authState?.stateChangeDelegate = self
         self.stateChanged()
@@ -130,22 +154,22 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     func updateUI(){
         // dynamically changes authorize button text depending on authorized state
         if authState != nil {
-            userinfoButton.enabled = authState!.isAuthorized
-            clearAuthStateButton.enabled = true
-            codeExchangeButton.enabled = (authState!.lastAuthorizationResponse.authorizationCode != nil) && (authState!.lastTokenResponse == nil)
-            authAutoButton.setTitle("Re-authorize", forState: .Normal)
-            authAutoButton.setTitle("Re-authorize", forState:.Highlighted)
-            authManual.setTitle("Re-authorize (Manual)", forState: .Normal)
-            authManual.setTitle("Re-authorize (Manual)", forState:.Highlighted)
+            userinfoButton.isEnabled = authState!.isAuthorized
+            clearAuthStateButton.isEnabled = true
+            codeExchangeButton.isEnabled = (authState!.lastAuthorizationResponse.authorizationCode != nil) && (authState!.lastTokenResponse == nil)
+            authAutoButton.setTitle("Re-authorize", for: UIControlState())
+            authAutoButton.setTitle("Re-authorize", for:.highlighted)
+            authManual.setTitle("Re-authorize (Manual)", for: UIControlState())
+            authManual.setTitle("Re-authorize (Manual)", for:.highlighted)
         }
         else{
-            userinfoButton.enabled = false
-            clearAuthStateButton.enabled = false
-            codeExchangeButton.enabled = false
-            authAutoButton.setTitle("Authorize", forState: .Normal)
-            authAutoButton.setTitle("Authorize", forState:.Highlighted)
-            authManual.setTitle("Authorize (Manual)", forState: .Normal)
-            authManual.setTitle("Authorize (Manual)", forState:.Highlighted)
+            userinfoButton.isEnabled = false
+            clearAuthStateButton.isEnabled = false
+            codeExchangeButton.isEnabled = false
+            authAutoButton.setTitle("Authorize", for: UIControlState())
+            authAutoButton.setTitle("Authorize", for:.highlighted)
+            authManual.setTitle("Authorize (Manual)", for: UIControlState())
+            authManual.setTitle("Authorize (Manual)", for:.highlighted)
         }
     }
     
@@ -155,13 +179,13 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     }
     
     
-    func didChangeState(state: OIDAuthState) {
+    func didChange(_ state: OIDAuthState) {
         authState = state
         authState?.stateChangeDelegate = self
         self.stateChanged()
     }
     
-    func authState(state: OIDAuthState, didEncounterAuthorizationError error: NSError) {
+    func authState(_ state: OIDAuthState, didEncounterAuthorizationError error: Error) {
         self.logMessage("Received authorization error: \(error)")
     }
     
@@ -169,18 +193,18 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Authorization code flow using @c OIDAuthState automatic code exchanges.
      @param sender IBAction sender.
      */
-    @IBAction func autoWithAutoCodeExchange(sender: AnyObject) {
-        let issuer = NSURL(string: kIssuer)
-        let redirectURI = NSURL(string: kRedirectURI)
+    @IBAction func autoWithAutoCodeExchange(_ sender: AnyObject) {
+        let issuer = URL(string: kIssuer)
+        let redirectURI = URL(string: kRedirectURI)
         
         self.logMessage("Fetching configuration for issuer: \(issuer!)")
         
         // discovers endpoints
-        OIDAuthorizationService.discoverServiceConfigurationForIssuer(issuer!){
+        OIDAuthorizationService.discoverConfiguration(forIssuer: issuer!){
             configuration,error in
             
             if configuration == nil {
-                self.logMessage("Error retrieving discovery document: \(error?.localizedDescription)")
+                self.logMessage("Error retrieving discovery document: \(String(describing: error?.localizedDescription))")
                 self.assignAuthState(nil)
                 return
             }
@@ -191,10 +215,11 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
             let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: redirectURI!, responseType: OIDResponseTypeCode, additionalParameters: nil)
             
             // performs authentication request
-            let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
-            self.logMessage("Initiating authorization request with scope: \(request!.scope!)")
             
-            appDelegate.currentAuthorizationFlow = OIDAuthState.authStateByPresentingAuthorizationRequest(request!, presentingViewController: self){
+            let appDelegate = UIApplication.shared.delegate as! AppDelegate
+            self.logMessage("Initiating authorization request with scope: \(request.scope!)")
+            
+            appDelegate.currentAuthorizationFlow = OIDAuthState.authState(byPresenting: request, presenting: self){
                 authState,error in
                 if authState != nil{
                     self.assignAuthState(authState)
@@ -213,18 +238,18 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      manually)
      @param sender IBAction sender.
      */
-    @IBAction func authNoCodeExchange(sender: AnyObject) {
-        let issuer = NSURL(string: kIssuer)
-        let redirectURI = NSURL(string: kRedirectURI)
+    @IBAction func authNoCodeExchange(_ sender: AnyObject) {
+        let issuer = URL(string: kIssuer)
+        let redirectURI = URL(string: kRedirectURI)
         
         self.logMessage("Fetching configuration for issuer: \(issuer!)")
         
         // discovers endpoints
-        OIDAuthorizationService.discoverServiceConfigurationForIssuer(issuer!){
+        OIDAuthorizationService.discoverConfiguration(forIssuer: issuer!){
             configuration,error in
             
             if configuration == nil {
-                self.logMessage("Error retrieving discovery document: \(error?.localizedDescription)")
+                self.logMessage("Error retrieving discovery document: \(String(describing: error?.localizedDescription))")
                 return
             }
             
@@ -234,10 +259,10 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
             let request = OIDAuthorizationRequest(configuration: configuration!, clientId: self.kClientID, scopes: [OIDScopeOpenID, OIDScopeProfile], redirectURL: redirectURI!, responseType: OIDResponseTypeCode, additionalParameters: nil)
             
             // performs authentication request
-            let appDelegate = UIApplication.sharedApplication().delegate as! AppDelegate
-            self.logMessage("Initiating authorization request: \(request!)")
+            let appDelegate = UIApplication.shared.delegate as! AppDelegate
+            self.logMessage("Initiating authorization request: \(request)")
             
-            appDelegate.currentAuthorizationFlow = OIDAuthorizationService.presentAuthorizationRequest(request!, presentingViewController: self){
+            appDelegate.currentAuthorizationFlow = OIDAuthorizationService.present(request, presenting: self){
                 authorizationResponse, error in
                 if authorizationResponse != nil{
                     self.assignAuthState(OIDAuthState(authorizationResponse: authorizationResponse!))
@@ -256,12 +281,12 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Performs the authorization code exchange at the token endpoint.
      @param sender IBAction sender.
      */
-    @IBAction func codeExchange(sender: AnyObject) {
+    @IBAction func codeExchange(_ sender: AnyObject) {
         // performs code exchange request
         let tokenExchangeRequest = authState?.lastAuthorizationResponse.tokenExchangeRequest()
         self.logMessage("Performing authorization code exchange with request [\(tokenExchangeRequest!)]")
         
-        OIDAuthorizationService.performTokenRequest(tokenExchangeRequest!){
+        OIDAuthorizationService.perform(tokenExchangeRequest!){
           tokenResponse,error in
             if tokenResponse == nil{
                 self.logMessage("Token exchange error: \(error!.localizedDescription)")
@@ -269,7 +294,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
             else{
                 self.logMessage("Received token response with accessToken: \(tokenResponse!.accessToken!)")
             }
-            self.authState?.updateWithTokenResponse(tokenResponse, error: error)
+            self.authState?.update(with: tokenResponse, error: error)
         }
     }
     
@@ -277,7 +302,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Nils the @c OIDAuthState object.
      @param sender IBAction sender.
      */
-    @IBAction func clearAuthState(sender: AnyObject) {
+    @IBAction func clearAuthState(_ sender: AnyObject) {
         self.assignAuthState(nil)
     }
     
@@ -285,7 +310,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Clears the UI log.
      @param sender IBAction sender.
      */
-    @IBAction func clearLog(sender: AnyObject) {
+    @IBAction func clearLog(_ sender: AnyObject) {
         logTextView.text = ""
     }
     
@@ -293,7 +318,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Performs a Userinfo API call using @c OIDAuthState.withFreshTokensPerformAction.
      @param sender IBAction sender.
      */
-    @IBAction func userinfo(sender: AnyObject) {
+    @IBAction func userinfo(_ sender: AnyObject) {
         let userInfoEndpoint = authState?.lastAuthorizationResponse.request.configuration.discoveryDocument?.userinfoEndpoint
         if userInfoEndpoint == nil{
             self.logMessage("Userinfo endpoint not declared in discovery document")
@@ -302,7 +327,6 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
         let currentAccessToken = authState?.lastTokenResponse?.accessToken
         
         self.logMessage("Performing userinfo request")
-        
         authState?.withFreshTokensPerformAction(){
             accessToken,idToken,error in
             if error != nil{
@@ -319,35 +343,35 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
             }
             
             // creates request to the userinfo endpoint, with access token in the Authorization header
-            let request = NSMutableURLRequest(URL: userInfoEndpoint!)
+            let request = NSMutableURLRequest(url: userInfoEndpoint!)
             let authorizationHeaderValue = "Bearer \(accessToken!)"
             request.addValue(authorizationHeaderValue, forHTTPHeaderField: "Authorization")
             
-            let configuration = NSURLSessionConfiguration.defaultSessionConfiguration()
-            let session = NSURLSession(configuration: configuration)
+            let configuration = URLSessionConfiguration.default
+            let session = URLSession(configuration: configuration)
             
             // performs HTTP request
-            let postDataTask = session.dataTaskWithRequest(request){
+            let postDataTask = session.dataTask(with: request as URLRequest){
                 data,response,error in
-                dispatch_async(dispatch_get_main_queue()){
-                    guard let httpResponse = response as? NSHTTPURLResponse else{
-                        self.logMessage("Non-HTTP response \(error)")
+                DispatchQueue.main.async(){
+                    guard let httpResponse = response as? HTTPURLResponse else{
+                        self.logMessage("Non-HTTP response \(String(describing: error))")
                         return
                     }
                     do{
-                       let jsonDictionaryOrArray = try NSJSONSerialization.JSONObjectWithData(data!, options: .MutableContainers)
+                       let jsonDictionaryOrArray = try JSONSerialization.jsonObject(with: data!, options: .mutableContainers)
                         if httpResponse.statusCode != 200{
-                            let responseText = NSString(data: data!, encoding: NSUTF8StringEncoding)
+                            let responseText = NSString(data: data!, encoding: String.Encoding.utf8.rawValue)
                             if httpResponse.statusCode == 401{
                                 // "401 Unauthorized" generally indicates there is an issue with the authorization
                                 // grant. Puts OIDAuthState into an error state.
-                                let oauthError = OIDErrorUtilities.resourceServerAuthorizationErrorWithCode(0, errorResponse: jsonDictionaryOrArray as? [NSObject : AnyObject], underlyingError: error)
-                                self.authState?.updateWithAuthorizationError(oauthError!)
+                                let oauthError = OIDErrorUtilities.resourceServerAuthorizationError(withCode: 0, errorResponse: jsonDictionaryOrArray as? [AnyHashable: Any], underlyingError: error)
+                                self.authState?.update(withAuthorizationError: oauthError)
                                 //log error
-                                self.logMessage("Authorization Error (\(oauthError)). Response: \(responseText)")
+                                self.logMessage("Authorization Error (\(oauthError)). Response: \(String(describing: responseText))")
                             }
                             else{
-                                self.logMessage("HTTP: \(httpResponse.statusCode). Response: \(responseText)")
+                                self.logMessage("HTTP: \(httpResponse.statusCode). Response: \(String(describing: responseText))")
                             }
                             return
                         }
@@ -366,14 +390,14 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Logs a message to stdout and the textfield.
      @param format The format string
      */
-    func logMessage(message:String){
+    func logMessage(_ message:String){
         // outputs to stdout
         print(message)
         
         // appends to output log
-        let dateFormatter = NSDateFormatter()
+        let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "hh:mm:ss"
-        let dateString = dateFormatter.stringFromDate(NSDate())
+        let dateString = dateFormatter.string(from: Date())
         logTextView.text = logTextView.text +  ((logTextView.text.isEmpty) ? "" : "\n") + dateString + ":" + message
         
     }

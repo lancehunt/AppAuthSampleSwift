@@ -71,11 +71,9 @@ static NSString *const kRequireRequestURIRegistrationKey = @"require_request_uri
 static NSString *const kOPPolicyURIKey = @"op_policy_uri";
 static NSString *const kOPTosURIKey = @"op_tos_uri";
 
-@implementation OIDServiceDiscovery {
-  NSDictionary *_discoveryDictionary;
-}
+@implementation OIDServiceDiscovery
 
-- (nullable instancetype)init OID_UNAVAILABLE_USE_INITIALIZER(@selector(initWithDictionary:error:));
+- (nonnull instancetype)init OID_UNAVAILABLE_USE_INITIALIZER(@selector(initWithDictionary:error:));
 
 - (nullable instancetype)initWithJSON:(NSString *)serviceDiscoveryJSON error:(NSError **)error {
   NSData *jsonData = [serviceDiscoveryJSON dataUsingEncoding:NSUTF8StringEncoding];
@@ -110,8 +108,7 @@ static NSString *const kOPTosURIKey = @"op_tos_uri";
 
 #pragma mark -
 
-/*! @fn dictionaryHasRequiredFields:error:
-    @brief Checks to see if the specified dictionary contains the required fields.
+/*! @brief Checks to see if the specified dictionary contains the required fields.
     @discussion This test is not meant to provide semantic analysis of the document (eg. fields
         where the value @c none is not an allowed option would not cause this method to fail if
         their value was @c none.) We are just testing to make sure we can meet the nullability
@@ -134,10 +131,12 @@ static NSString *const kOPTosURIKey = @"op_tos_uri";
 
   for (NSString *field in requiredFields) {
     if (!dictionary[field]) {
-      NSString *errorText = [NSString stringWithFormat:kMissingFieldErrorText, field];
-      *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeInvalidDiscoveryDocument
-                                underlyingError:nil
-                                    description:errorText];
+      if (error) {
+        NSString *errorText = [NSString stringWithFormat:kMissingFieldErrorText, field];
+        *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeInvalidDiscoveryDocument
+                                  underlyingError:nil
+                                      description:errorText];
+      }
       return NO;
     }
   }
@@ -151,10 +150,12 @@ static NSString *const kOPTosURIKey = @"op_tos_uri";
 
   for (NSString *field in requiredURLFields) {
     if (![NSURL URLWithString:dictionary[field]]) {
-      NSString *errorText = [NSString stringWithFormat:kInvalidURLFieldErrorText, field];
-      *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeInvalidDiscoveryDocument
-                                underlyingError:nil
-                                    description:errorText];
+      if (error) {
+        NSString *errorText = [NSString stringWithFormat:kInvalidURLFieldErrorText, field];
+        *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeInvalidDiscoveryDocument
+                                  underlyingError:nil
+                                      description:errorText];
+      }
       return NO;
     }
   }

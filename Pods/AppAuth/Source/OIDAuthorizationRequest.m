@@ -24,73 +24,84 @@
 #import "OIDTokenUtilities.h"
 #import "OIDURLQueryComponent.h"
 
-/*! @var kConfigurationKey
-    @brief The key for the @c configuration property for @c NSSecureCoding
+/*! @brief The key for the @c configuration property for @c NSSecureCoding
  */
 static NSString *const kConfigurationKey = @"configuration";
 
-/*! @var kResponseTypeKey
-    @brief Key used to encode the @c responseType property for @c NSSecureCoding, and on the URL
+/*! @brief Key used to encode the @c responseType property for @c NSSecureCoding, and on the URL
         request.
  */
 static NSString *const kResponseTypeKey = @"response_type";
 
-/*! @var kClientIDKey
-    @brief Key used to encode the @c clientID property for @c NSSecureCoding, and on the URL
+/*! @brief Key used to encode the @c clientID property for @c NSSecureCoding, and on the URL
         request.
  */
 static NSString *const kClientIDKey = @"client_id";
 
-/*! @var kScopeKey
-    @brief Key used to encode the @c scope property for @c NSSecureCoding, and on the URL request.
+/*! @brief Key used to encode the @c clientSecret property for @c NSSecureCoding.
+ */
+static NSString *const kClientSecretKey = @"client_secret";
+
+/*! @brief Key used to encode the @c scope property for @c NSSecureCoding, and on the URL request.
  */
 static NSString *const kScopeKey = @"scope";
 
-/*! @var kRedirectURLKey
-    @brief Key used to encode the @c redirectURL property for @c NSSecureCoding, and on the URL
+/*! @brief Key used to encode the @c redirectURL property for @c NSSecureCoding, and on the URL
         request.
  */
 static NSString *const kRedirectURLKey = @"redirect_uri";
 
-/*! @var kStateKey
-    @brief Key used to encode the @c state property for @c NSSecureCoding, and on the URL request.
+/*! @brief Key used to encode the @c state property for @c NSSecureCoding, and on the URL request.
  */
 static NSString *const kStateKey = @"state";
 
-/*! @var kCodeVerifierKey
-    @brief Key used to encode the @c codeVerifier property for @c NSSecureCoding.
+/*! @brief Key used to encode the @c codeVerifier property for @c NSSecureCoding.
  */
 static NSString *const kCodeVerifierKey = @"code_verifier";
 
-/*! @var kCodeChallengeKey
-    @brief Key used to send the @c codeChallenge on the URL request.
+/*! @brief Key used to send the @c codeChallenge on the URL request.
  */
 static NSString *const kCodeChallengeKey = @"code_challenge";
 
-/*! @var kCodeChallengeMethodKey
-    @brief Key used to send the @c codeChallengeMethod on the URL request.
+/*! @brief Key used to send the @c codeChallengeMethod on the URL request.
  */
 static NSString *const kCodeChallengeMethodKey = @"code_challenge_method";
 
-/*! @var kAdditionalParametersKey
-    @brief Key used to encode the @c additionalParameters property for
+/*! @brief Key used to encode the @c additionalParameters property for
         @c NSSecureCoding
  */
 static NSString *const kAdditionalParametersKey = @"additionalParameters";
 
-/*! @var kStateSizeBytes
-    @brief Number of random bytes generated for the @ state.
+/*! @brief Number of random bytes generated for the @ state.
  */
 static NSUInteger const kStateSizeBytes = 32;
 
-/*! @var kCodeVerifierBytes
-    @brief Number of random bytes generated for the @ codeVerifier.
+/*! @brief Number of random bytes generated for the @ codeVerifier.
  */
 static NSUInteger const kCodeVerifierBytes = 32;
 
+/*! @brief Assertion text for unsupported response types.
+ */
+static NSString *const OIDOAuthUnsupportedResponseTypeMessage =
+    @"The response_type \"%@\" isn't supported. AppAuth only supports the \"code\" response_type.";
+
+/*! @brief Code challenge request method.
+ */
 NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
 
 @implementation OIDAuthorizationRequest
+
+@synthesize configuration = _configuration;
+@synthesize responseType = _responseType;
+@synthesize clientID = _clientID;
+@synthesize clientSecret = _clientSecret;
+@synthesize scope = _scope;
+@synthesize redirectURL = _redirectURL;
+@synthesize state = _state;
+@synthesize codeVerifier = _codeVerifier;
+@synthesize codeChallenge = _codeChallenge;
+@synthesize codeChallengeMethod = _codeChallengeMethod;
+@synthesize additionalParameters = _additionalParameters;
 
 - (instancetype)init
     OID_UNAVAILABLE_USE_INITIALIZER(
@@ -102,8 +113,9 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
                    additionalParameters:)
     );
 
-- (nullable instancetype)initWithConfiguration:(OIDServiceConfiguration *)configuration
+- (instancetype)initWithConfiguration:(OIDServiceConfiguration *)configuration
                 clientId:(NSString *)clientID
+            clientSecret:(nullable NSString *)clientSecret
                    scope:(nullable NSString *)scope
              redirectURL:(NSURL *)redirectURL
             responseType:(NSString *)responseType
@@ -117,9 +129,18 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
   if (self) {
     _configuration = [configuration copy];
     _clientID = [clientID copy];
+    _clientSecret = [clientSecret copy];
     _scope = [scope copy];
     _redirectURL = [redirectURL copy];
     _responseType = [responseType copy];
+    // Attention: Please refer to https://github.com/openid/AppAuth-iOS/issues/105
+    // If you change the restriction on response type here, you must also update initWithCoder:
+    if (![_responseType isEqualToString:OIDResponseTypeCode]) {
+      // AppAuth only supports the `code` response type.
+      // Discussion: https://github.com/openid/AppAuth-iOS/issues/98
+      NSAssert(NO, OIDOAuthUnsupportedResponseTypeMessage, _responseType);
+      return nil;
+    }
     _state = [state copy];
     _codeVerifier = [codeVerifier copy];
     _codeChallenge = [codeChallenge copy];
@@ -131,8 +152,10 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
   return self;
 }
 
-- (nullable instancetype)initWithConfiguration:(OIDServiceConfiguration *)configuration
+- (instancetype)
+   initWithConfiguration:(OIDServiceConfiguration *)configuration
                 clientId:(NSString *)clientID
+            clientSecret:(NSString *)clientSecret
                   scopes:(nullable NSArray<NSString *> *)scopes
              redirectURL:(NSURL *)redirectURL
             responseType:(NSString *)responseType
@@ -144,6 +167,7 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
 
   return [self initWithConfiguration:configuration
                             clientId:clientID
+                        clientSecret:clientSecret
                                scope:[OIDScopeUtilities scopesWithArray:scopes]
                          redirectURL:redirectURL
                         responseType:responseType
@@ -151,6 +175,22 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
                         codeVerifier:codeVerifier
                        codeChallenge:codeChallenge
                  codeChallengeMethod:OIDOAuthorizationRequestCodeChallengeMethodS256
+                additionalParameters:additionalParameters];
+}
+
+- (instancetype)
+    initWithConfiguration:(OIDServiceConfiguration *)configuration
+                 clientId:(NSString *)clientID
+                   scopes:(nullable NSArray<NSString *> *)scopes
+              redirectURL:(NSURL *)redirectURL
+             responseType:(NSString *)responseType
+    additionalParameters:(nullable NSDictionary<NSString *, NSString *> *)additionalParameters {
+  return [self initWithConfiguration:configuration
+                            clientId:clientID
+                        clientSecret:nil
+                              scopes:scopes
+                         redirectURL:redirectURL
+                        responseType:responseType
                 additionalParameters:additionalParameters];
 }
 
@@ -174,8 +214,14 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
   OIDServiceConfiguration *configuration =
       [aDecoder decodeObjectOfClass:[OIDServiceConfiguration class]
                              forKey:kConfigurationKey];
-  NSString *responseType = [aDecoder decodeObjectOfClass:[NSString class] forKey:kResponseTypeKey];
+  // Attention: Please refer to https://github.com/openid/AppAuth-iOS/issues/105
+  // If the initializer relaxes it's restriction on the response type field, this code must also
+  // be updated to re-enable use of the serialized responseType value. The value of 'code' here
+  // is only a valid assumption for that reason.
+  // [aDecoder decodeObjectOfClass:[NSString class] forKey:kResponseTypeKey];
+  NSString *responseType = OIDResponseTypeCode;
   NSString *clientID = [aDecoder decodeObjectOfClass:[NSString class] forKey:kClientIDKey];
+  NSString *clientSecret = [aDecoder decodeObjectOfClass:[NSString class] forKey:kClientSecretKey];
   NSString *scope = [aDecoder decodeObjectOfClass:[NSString class] forKey:kScopeKey];
   NSURL *redirectURL = [aDecoder decodeObjectOfClass:[NSURL class] forKey:kRedirectURLKey];
   NSString *state = [aDecoder decodeObjectOfClass:[NSString class] forKey:kStateKey];
@@ -194,6 +240,7 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
 
   self = [self initWithConfiguration:configuration
                             clientId:clientID
+                        clientSecret:clientSecret
                                scope:scope
                          redirectURL:redirectURL
                         responseType:responseType
@@ -209,6 +256,7 @@ NSString *const OIDOAuthorizationRequestCodeChallengeMethodS256 = @"S256";
   [aCoder encodeObject:_configuration forKey:kConfigurationKey];
   [aCoder encodeObject:_responseType forKey:kResponseTypeKey];
   [aCoder encodeObject:_clientID forKey:kClientIDKey];
+  [aCoder encodeObject:_clientSecret forKey:kClientSecretKey];
   [aCoder encodeObject:_scope forKey:kScopeKey];
   [aCoder encodeObject:_redirectURL forKey:kRedirectURLKey];
   [aCoder encodeObject:_state forKey:kStateKey];

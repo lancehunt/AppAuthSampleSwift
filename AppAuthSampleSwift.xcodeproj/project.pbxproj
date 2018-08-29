@@ -97,12 +97,12 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 287310CB1CF5FF7B00ECC691 /* Build configuration list for PBXNativeTarget "AppAuthSampleSwift" */;
 			buildPhases = (
-				A2E40F0198A306FFB4C8CDDE /* 📦 Check Pods Manifest.lock */,
+				A2E40F0198A306FFB4C8CDDE /* [CP] Check Pods Manifest.lock */,
 				287310B21CF5FF7A00ECC691 /* Sources */,
 				287310B31CF5FF7A00ECC691 /* Frameworks */,
 				287310B41CF5FF7A00ECC691 /* Resources */,
-				A467E65E64C42EAC45F9FED3 /* 📦 Embed Pods Frameworks */,
-				FCB0FDB637D0254997937F9F /* 📦 Copy Pods Resources */,
+				A467E65E64C42EAC45F9FED3 /* [CP] Embed Pods Frameworks */,
+				FCB0FDB637D0254997937F9F /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -125,6 +125,7 @@
 				TargetAttributes = {
 					287310B51CF5FF7A00ECC691 = {
 						CreatedOnToolsVersion = 7.3.1;
+						LastSwiftMigration = 0830;
 					};
 				};
 			};
@@ -160,44 +161,50 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		A2E40F0198A306FFB4C8CDDE /* 📦 Check Pods Manifest.lock */ = {
+		A2E40F0198A306FFB4C8CDDE /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
 			);
-			name = "📦 Check Pods Manifest.lock";
+			name = "[CP] Check Pods Manifest.lock";
 			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-AppAuthSampleSwift-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_ROOT}/../Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [[ $? != 0 ]] ; then\n    cat << EOM\nerror: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\nEOM\n    exit 1\nfi\n";
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		A467E65E64C42EAC45F9FED3 /* 📦 Embed Pods Frameworks */ = {
+		A467E65E64C42EAC45F9FED3 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
+				"${SRCROOT}/Pods/Target Support Files/Pods-AppAuthSampleSwift/Pods-AppAuthSampleSwift-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/AppAuth/AppAuth.framework",
 			);
-			name = "📦 Embed Pods Frameworks";
+			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/AppAuth.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/Pods/Target Support Files/Pods-AppAuthSampleSwift/Pods-AppAuthSampleSwift-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		FCB0FDB637D0254997937F9F /* 📦 Copy Pods Resources */ = {
+		FCB0FDB637D0254997937F9F /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			inputPaths = (
 			);
-			name = "📦 Copy Pods Resources";
+			name = "[CP] Copy Pods Resources";
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -334,6 +341,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "AppAuthSampleSwift/AppAuthSampleSwift-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Debug;
 		};
@@ -348,6 +356,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.appauthsampleswift.www.AppAuthSampleSwift;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "AppAuthSampleSwift/AppAuthSampleSwift-Bridging-Header.h";
+				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};

@@ -18,46 +18,47 @@
 
 #import "OIDAuthorizationService.h"
 
-#import <SafariServices/SafariServices.h>
-
 #import "OIDAuthorizationRequest.h"
 #import "OIDAuthorizationResponse.h"
+#import "OIDAuthorizationUICoordinator.h"
 #import "OIDDefines.h"
 #import "OIDErrorUtilities.h"
+#import "OIDRegistrationRequest.h"
+#import "OIDRegistrationResponse.h"
 #import "OIDServiceConfiguration.h"
 #import "OIDServiceDiscovery.h"
 #import "OIDTokenRequest.h"
 #import "OIDTokenResponse.h"
 #import "OIDURLQueryComponent.h"
 
-/*! @var kOpenIDConfigurationWellKnownPath
-    @brief Path appended to an OpenID Connect issuer for discovery
+/*! @brief Path appended to an OpenID Connect issuer for discovery
     @see https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig
  */
 static NSString *const kOpenIDConfigurationWellKnownPath = @".well-known/openid-configuration";
 
+/*! @brief The state authorization parameter.
+ */
+static NSString *const kStateParameter = @"state";
+
 NS_ASSUME_NONNULL_BEGIN
 
-@interface OIDAuthorizationFlowSessionImplementation : NSObject <OIDAuthorizationFlowSession,
-                                                                 SFSafariViewControllerDelegate>
-
-- (instancetype)init NS_UNAVAILABLE;
-
-- (nullable instancetype)initWithRequest:(OIDAuthorizationRequest *)request
-    NS_DESIGNATED_INITIALIZER;
-
-- (void)presentSafariViewControllerWithViewController:(UIViewController *)parentViewController
-    callback:(OIDAuthorizationCallback)authorizationFlowCallback;
-
-@end
-
-@implementation OIDAuthorizationFlowSessionImplementation {
-  __weak SFSafariViewController *_safariVC;
+@interface OIDAuthorizationFlowSessionImplementation : NSObject<OIDAuthorizationFlowSession> {
+  // private variables
   OIDAuthorizationRequest *_request;
+  id<OIDAuthorizationUICoordinator> _UICoordinator;
   OIDAuthorizationCallback _pendingauthorizationFlowCallback;
 }
 
-- (nullable instancetype)initWithRequest:(OIDAuthorizationRequest *)request {
+- (instancetype)init NS_UNAVAILABLE;
+
+- (instancetype)initWithRequest:(OIDAuthorizationRequest *)request
+    NS_DESIGNATED_INITIALIZER;
+
+@end
+
+@implementation OIDAuthorizationFlowSessionImplementation
+
+- (instancetype)initWithRequest:(OIDAuthorizationRequest *)request {
   self = [super init];
   if (self) {
     _request = [request copy];
@@ -65,36 +66,29 @@ NS_ASSUME_NONNULL_BEGIN
   return self;
 }
 
-- (void)presentSafariViewControllerWithViewController:(UIViewController *)parentViewController
-    callback:(OIDAuthorizationCallback)authorizationFlowCallback {
+- (void)presentAuthorizationWithCoordinator:(id<OIDAuthorizationUICoordinator>)UICoordinator
+                                   callback:(OIDAuthorizationCallback)authorizationFlowCallback {
+  _UICoordinator = UICoordinator;
   _pendingauthorizationFlowCallback = authorizationFlowCallback;
-  NSURL *URL = [_request authorizationRequestURL];
-  if ([SFSafariViewController class]) {
-    SFSafariViewController *safariVC = [[SFSafariViewController alloc] initWithURL:URL
-                                                           entersReaderIfAvailable:NO];
-    safariVC.delegate = self;
-    _safariVC = safariVC;
-    [parentViewController presentViewController:safariVC animated:YES completion:nil];
-  } else {
-    BOOL openedSafari = [[UIApplication sharedApplication] openURL:URL];
-    if (!openedSafari) {
-      NSError *safariError = [OIDErrorUtilities errorWithCode:OIDErrorCodeSafariOpenError
-                                              underlyingError:nil
-                                                  description:@"Unable to open Safari."];
-      [self didFinishWithResponse:nil error:safariError];
-    }
+  BOOL authorizationFlowStarted =
+      [_UICoordinator presentAuthorizationRequest:_request session:self];
+  if (!authorizationFlowStarted) {
+    NSError *safariError = [OIDErrorUtilities errorWithCode:OIDErrorCodeSafariOpenError
+                                            underlyingError:nil
+                                                description:@"Unable to open Safari."];
+    [self didFinishWithResponse:nil error:safariError];
   }
 }
 
 - (void)cancel {
-  SFSafariViewController *safari = _safariVC;
-  _safariVC = nil;
-  [safari dismissViewControllerAnimated:YES completion:^{
-    NSError *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeUserCanceledAuthorizationFlow
-                                      underlyingError:nil
-                                          description:nil];
-    [self didFinishWithResponse:nil error:error];
-  }];
+  [_UICoordinator dismissAuthorizationAnimated:YES
+                                    completion:^{
+                                      NSError *error = [OIDErrorUtilities
+                                            errorWithCode:OIDErrorCodeUserCanceledAuthorizationFlow
+                                          underlyingError:nil
+                                              description:nil];
+                                      [self didFinishWithResponse:nil error:error];
+                                    }];
 }
 
 - (BOOL)shouldHandleURL:(NSURL *)URL {
@@ -132,16 +126,10 @@ NS_ASSUME_NONNULL_BEGIN
                                     underlyingError:nil];
   }
 
-  // no errors, must be a valid OAuth 2.0 response
-  if (!error) {
-    response = [[OIDAuthorizationResponse alloc] initWithRequest:_request
-                                                      parameters:query.dictionaryValue];
-  }
-
   // verifies that the state in the response matches the state in the request, or both are nil
-  if (!OIDIsEqualIncludingNil(_request.state, response.state)) {
+  if (!OIDIsEqualIncludingNil(_request.state, query.dictionaryValue[kStateParameter])) {
     NSMutableDictionary *userInfo = [query.dictionaryValue mutableCopy];
-    userInfo[NSLocalizedFailureReasonErrorKey] =
+    userInfo[NSLocalizedDescriptionKey] =
         [NSString stringWithFormat:@"State mismatch, expecting %@ but got %@ in authorization "
                                     "response %@",
                                    _request.state,
@@ -153,37 +141,33 @@ NS_ASSUME_NONNULL_BEGIN
                             userInfo:userInfo];
   }
 
-  if (_safariVC) {
-    SFSafariViewController *safari = _safariVC;
-    _safariVC = nil;
-    [safari dismissViewControllerAnimated:YES completion:^{
-      [self didFinishWithResponse:response error:error];
-    }];
-  } else {
-    [self didFinishWithResponse:response error:error];
+  // no error, should be a valid OAuth 2.0 response
+  if (!error) {
+    response = [[OIDAuthorizationResponse alloc] initWithRequest:_request
+                                                      parameters:query.dictionaryValue];
   }
+
+  [_UICoordinator dismissAuthorizationAnimated:YES
+                                    completion:^{
+                                      [self didFinishWithResponse:response error:error];
+                                    }];
 
   return YES;
 }
 
-- (void)safariViewControllerDidFinish:(SFSafariViewController *)controller {
-  NSError *error = [OIDErrorUtilities errorWithCode:OIDErrorCodeProgramCanceledAuthorizationFlow
-                                    underlyingError:nil
-                                        description:nil];
+- (void)failAuthorizationFlowWithError:(NSError *)error {
   [self didFinishWithResponse:nil error:error];
 }
 
-/*! @fn didFinishWithResponse:error:
-    @brief Invokes the pending callback and performs cleanup.
+/*! @brief Invokes the pending callback and performs cleanup.
     @param response The authorization response, if any to return to the callback.
     @param error The error, if any, to return to the callback.
  */
 - (void)didFinishWithResponse:(nullable OIDAuthorizationResponse *)response
                         error:(nullable NSError *)error {
   OIDAuthorizationCallback callback = _pendingauthorizationFlowCallback;
-  _safariVC = nil;
   _pendingauthorizationFlowCallback = nil;
-
+  _UICoordinator = nil;
   if (callback) {
     callback(response, error);
   }
@@ -193,6 +177,8 @@ NS_ASSUME_NONNULL_BEGIN
 
 @implementation OIDAuthorizationService
 
+@synthesize configuration = _configuration;
+
 + (void)discoverServiceConfigurationForIssuer:(NSURL *)issuerURL
                                    completion:(OIDDiscoveryCallback)completion {
   NSURL *fullDiscoveryURL =
@@ -201,7 +187,6 @@ NS_ASSUME_NONNULL_BEGIN
   return [[self class] discoverServiceConfigurationForDiscoveryURL:fullDiscoveryURL
                                                         completion:completion];
 }
-
 
 + (void)discoverServiceConfigurationForDiscoveryURL:(NSURL *)discoveryURL
     completion:(OIDDiscoveryCallback)completion {
@@ -214,7 +199,7 @@ NS_ASSUME_NONNULL_BEGIN
     if (error || !data) {
       error = [OIDErrorUtilities errorWithCode:OIDErrorCodeNetworkError
                                underlyingError:error
-                                   description:nil];
+                                   description:error.localizedDescription];
       dispatch_async(dispatch_get_main_queue(), ^{
         completion(nil, error);
       });
@@ -264,13 +249,12 @@ NS_ASSUME_NONNULL_BEGIN
 
 + (id<OIDAuthorizationFlowSession>)
     presentAuthorizationRequest:(OIDAuthorizationRequest *)request
-       presentingViewController:(UIViewController *)presentingViewController
+                  UICoordinator:(id<OIDAuthorizationUICoordinator>)UICoordinator
                        callback:(OIDAuthorizationCallback)callback {
-  OIDAuthorizationFlowSessionImplementation *flow =
+  OIDAuthorizationFlowSessionImplementation *flowSession =
       [[OIDAuthorizationFlowSessionImplementation alloc] initWithRequest:request];
-  [flow presentSafariViewControllerWithViewController:presentingViewController
-                                             callback:callback];
-  return flow;
+  [flowSession presentAuthorizationWithCoordinator:UICoordinator callback:callback];
+  return flowSession;
 }
 
 #pragma mark - Token Endpoint
@@ -295,14 +279,16 @@ NS_ASSUME_NONNULL_BEGIN
     }
 
     NSHTTPURLResponse *HTTPURLResponse = (NSHTTPURLResponse *)response;
-
-    if (HTTPURLResponse.statusCode != 200) {
+    NSInteger statusCode = HTTPURLResponse.statusCode;
+    if (statusCode != 200) {
       // A server error occurred.
       NSError *serverError =
           [OIDErrorUtilities HTTPErrorWithHTTPResponse:HTTPURLResponse data:data];
 
-      // HTTP 400 may indicate an RFC6749 Section 5.2 error response, checks for that
-      if (HTTPURLResponse.statusCode == 400) {
+      // HTTP 400 may indicate an RFC6749 Section 5.2 error response.
+      // HTTP 429 may occur during polling for device-flow requests for the slow_down error
+      // https://tools.ietf.org/html/draft-ietf-oauth-device-flow-03#section-3.5
+      if (statusCode == 400 || statusCode == 429) {
         NSError *jsonDeserializationError;
         NSDictionary<NSString *, NSObject<NSCopying> *> *json =
             [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonDeserializationError];
@@ -364,6 +350,114 @@ NS_ASSUME_NONNULL_BEGIN
     // Success
     dispatch_async(dispatch_get_main_queue(), ^{
       callback(tokenResponse, nil);
+    });
+  }] resume];
+}
+
+
+#pragma mark - Registration Endpoint
+
++ (void)performRegistrationRequest:(OIDRegistrationRequest *)request
+                          completion:(OIDRegistrationCompletion)completion {
+  NSURLRequest *URLRequest = [request URLRequest];
+  if (!URLRequest) {
+    // A problem occurred deserializing the response/JSON.
+    NSError *returnedError = [OIDErrorUtilities errorWithCode:OIDErrorCodeJSONSerializationError
+                                              underlyingError:nil
+                                                  description:@"The registration request could not "
+                                                               "be serialized as JSON."];
+    dispatch_async(dispatch_get_main_queue(), ^{
+      completion(nil, returnedError);
+    });
+    return;
+  }
+
+  NSURLSession *session = [NSURLSession sharedSession];
+  [[session dataTaskWithRequest:URLRequest
+              completionHandler:^(NSData *_Nullable data,
+                                  NSURLResponse *_Nullable response,
+                                  NSError *_Nullable error) {
+    if (error) {
+      // A network error or server error occurred.
+      NSError *returnedError = [OIDErrorUtilities errorWithCode:OIDErrorCodeNetworkError
+                                                underlyingError:error
+                                                    description:nil];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        completion(nil, returnedError);
+      });
+      return;
+    }
+
+    NSHTTPURLResponse *HTTPURLResponse = (NSHTTPURLResponse *) response;
+
+    if (HTTPURLResponse.statusCode != 201 && HTTPURLResponse.statusCode != 200) {
+      // A server error occurred.
+      NSError *serverError = [OIDErrorUtilities HTTPErrorWithHTTPResponse:HTTPURLResponse
+                                                                     data:data];
+
+      // HTTP 400 may indicate an OpenID Connect Dynamic Client Registration 1.0 Section 3.3 error
+      // response, checks for that
+      if (HTTPURLResponse.statusCode == 400) {
+        NSError *jsonDeserializationError;
+        NSDictionary<NSString *, NSObject <NSCopying> *> *json =
+            [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonDeserializationError];
+
+        // if the HTTP 400 response parses as JSON and has an 'error' key, it's an OAuth error
+        // these errors are special as they indicate a problem with the authorization grant
+        if (json[OIDOAuthErrorFieldError]) {
+          NSError *oauthError =
+              [OIDErrorUtilities OAuthErrorWithDomain:OIDOAuthRegistrationErrorDomain
+                                        OAuthResponse:json
+                                      underlyingError:serverError];
+          dispatch_async(dispatch_get_main_queue(), ^{
+            completion(nil, oauthError);
+          });
+          return;
+        }
+      }
+
+      // not an OAuth error, just a generic server error
+      NSError *returnedError = [OIDErrorUtilities errorWithCode:OIDErrorCodeServerError
+                                                underlyingError:serverError
+                                                    description:nil];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        completion(nil, returnedError);
+      });
+      return;
+    }
+
+    NSError *jsonDeserializationError;
+    NSDictionary<NSString *, NSObject <NSCopying> *> *json =
+        [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonDeserializationError];
+    if (jsonDeserializationError) {
+      // A problem occurred deserializing the response/JSON.
+      NSError *returnedError = [OIDErrorUtilities errorWithCode:OIDErrorCodeJSONDeserializationError
+                                                underlyingError:jsonDeserializationError
+                                                    description:nil];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        completion(nil, returnedError);
+      });
+      return;
+    }
+
+    OIDRegistrationResponse *registrationResponse =
+        [[OIDRegistrationResponse alloc] initWithRequest:request
+                                              parameters:json];
+    if (!registrationResponse) {
+      // A problem occurred constructing the registration response from the JSON.
+      NSError *returnedError =
+          [OIDErrorUtilities errorWithCode:OIDErrorCodeRegistrationResponseConstructionError
+                           underlyingError:jsonDeserializationError
+                               description:nil];
+      dispatch_async(dispatch_get_main_queue(), ^{
+        completion(nil, returnedError);
+      });
+      return;
+    }
+
+    // Success
+    dispatch_async(dispatch_get_main_queue(), ^{
+      completion(registrationResponse, nil);
     });
   }] resume];
 }

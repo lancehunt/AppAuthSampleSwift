@@ -23,53 +23,63 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/*! @typedef OIDServiceConfigurationCreated
-    @brief The type of block called when a @c OIDServiceConfiguration has been created
+/*! @brief The type of block called when a @c OIDServiceConfiguration has been created
         by loading a @c OIDServiceDiscovery from an @c NSURL.
  */
 typedef void (^OIDServiceConfigurationCreated)
     (OIDServiceConfiguration *_Nullable serviceConfiguration,
      NSError *_Nullable error);
 
-/*! @class OIDServiceConfiguration
-    @brief Represents the information needed to construct a @c OIDAuthorizationService.
+/*! @brief Represents the information needed to construct a @c OIDAuthorizationService.
  */
-@interface OIDServiceConfiguration : NSObject <NSCopying, NSSecureCoding>
+@interface OIDServiceConfiguration : NSObject <NSCopying, NSSecureCoding> {
+  // property variables
+  NSURL *_authorizationEndpoint;
+  NSURL *_tokenEndpoint;
+  NSURL *_registrationEndpoint;
+  OIDServiceDiscovery *_discoveryDocument;
+}
 
-/*! @property authorizationEndpoint
-    @brief The authorization endpoint URI.
+/*! @brief The authorization endpoint URI.
  */
 @property(nonatomic, readonly) NSURL *authorizationEndpoint;
 
-/*! @property tokenEndpoint
-    @brief The token exchange and refresh endpoint URI.
+/*! @brief The token exchange and refresh endpoint URI.
  */
 @property(nonatomic, readonly) NSURL *tokenEndpoint;
 
-/*! @property discoveryDocument
-    @brief The discovery document.
+/*! @brief The dynamic client registration endpoint URI.
+ */
+@property(nonatomic, readonly, nullable) NSURL *registrationEndpoint;
+
+/*! @brief The discovery document.
  */
 @property(nonatomic, readonly, nullable) OIDServiceDiscovery *discoveryDocument;
 
-/*! @fn init
-    @internal
+/*! @internal
     @brief Unavailable. Please use @c initWithAuthorizationEndpoint:tokenEndpoint: or
         @c initWithDiscoveryDocument:.
  */
-- (nullable instancetype)init NS_UNAVAILABLE;
+- (instancetype)init NS_UNAVAILABLE;
 
-/*! @fn initWithAuthorizationEndpoint:tokenEndpoint:
-    @param authorizationEndpoint The authorization endpoint URI.
+/*! @param authorizationEndpoint The authorization endpoint URI.
     @param tokenEndpoint The token exchange and refresh endpoint URI.
  */
-- (nullable instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
-                                         tokenEndpoint:(NSURL *)tokenEndpoint;
+- (instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
+                                tokenEndpoint:(NSURL *)tokenEndpoint;
 
-/*! @fn initWithDiscoveryDocument:
-    @param discoveryDocument The discovery document from which to extract the required OAuth
+/*! @param authorizationEndpoint The authorization endpoint URI.
+    @param tokenEndpoint The token exchange and refresh endpoint URI.
+    @param registrationEndpoint The dynamic client registration endpoint URI.
+ */
+- (instancetype)initWithAuthorizationEndpoint:(NSURL *)authorizationEndpoint
+                                tokenEndpoint:(NSURL *)tokenEndpoint
+                         registrationEndpoint:(nullable NSURL *)registrationEndpoint;
+
+/*! @param discoveryDocument The discovery document from which to extract the required OAuth
         configuration.
  */
-- (nullable instancetype)initWithDiscoveryDocument:(OIDServiceDiscovery *)discoveryDocument;
+- (instancetype)initWithDiscoveryDocument:(OIDServiceDiscovery *)discoveryDocument;
 
 @end
 

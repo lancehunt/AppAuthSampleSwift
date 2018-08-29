@@ -1,7 +1,7 @@
-/*! @file OIDResponseTypes.h
+/*! @file OIDClientMetadataParameters.h
     @brief AppAuth iOS SDK
     @copyright
-        Copyright 2015 Google Inc. All Rights Reserved.
+        Copyright 2016 The AppAuth for iOS Authors. All Rights Reserved.
     @copydetails
         Licensed under the Apache License, Version 2.0 (the "License");
         you may not use this file except in compliance with the License.
@@ -16,16 +16,18 @@
         limitations under the License.
  */
 
-#import <Foundation/Foundation.h>
+#import "OIDClientMetadataParameters.h"
 
-/*! @brief A constant for the standard OAuth2 Response Type of 'code'.
- */
-extern NSString *const OIDResponseTypeCode;
+NSString *const OIDTokenEndpointAuthenticationMethodParam = @"token_endpoint_auth_method";
 
-/*! @brief A constant for the standard OAuth2 Response Type of 'token'.
- */
-extern NSString *const OIDResponseTypeToken;
+NSString *const OIDApplicationTypeParam = @"application_type";
 
-/*! @brief A constant for the standard OAuth2 Response Type of 'id_token'.
- */
-extern NSString *const OIDResponseTypeIDToken;
+NSString *const OIDRedirectURIsParam = @"redirect_uris";
+
+NSString *const OIDResponseTypesParam = @"response_types";
+
+NSString *const OIDGrantTypesParam = @"grant_types";
+
+NSString *const OIDSubjectTypeParam = @"subject_type";
+
+NSString *const OIDApplicationTypeNative = @"native";

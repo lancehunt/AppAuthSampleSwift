@@ -6,6 +6,6 @@ target 'AppAuthSampleSwift' do
   use_frameworks!
 
   # Pods for AppAuthSampleSwift
-  pod 'AppAuth'
+  pod 'AppAuth', '~> 0.30'
 
 end
