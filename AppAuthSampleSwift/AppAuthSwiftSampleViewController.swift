@@ -45,7 +45,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     /*! @var kIssuer
      @brief The OIDC issuer from which the configuration will be discovered.
      */
-    let kIssuer = "https://accounts.google.com"
+    @objc let kIssuer = "https://accounts.google.com"
     
     /*! @var kClientID
      @brief The OAuth client ID.
@@ -53,7 +53,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      https://console.developers.google.com/apis/credentials?project=_
      The client should be registered with the "iOS" type.
      */
-    let kClientID =
+    @objc let kClientID =
     "120786619086-sr3hag35r805o1ic06q4ch8rb41reg6p.apps.googleusercontent.com"
     
     /*! @var kRedirectURI
@@ -63,19 +63,19 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      property list ("CFBundleURLTypes" plist key). Any path component will work, we use
      'oauthredirect' here to help disambiguate from any other use of this scheme.
      */
-    let kRedirectURI =
+    @objc let kRedirectURI =
     "com.googleusercontent.apps.120786619086-sr3hag35r805o1ic06q4ch8rb41reg6p:/oauthredirect"
     
     /*! @var kAppAuthExampleAuthStateKey
      @brief NSCoding key for the authState property.
      */
-    let kAppAuthExampleAuthStateKey = "authState";
+    @objc let kAppAuthExampleAuthStateKey = "authState";
     
     /*! @property authState
      @brief The authorization state. This is the AppAuth object that you should keep around and
      serialize to disk.
      */
-    var authState:OIDAuthState?
+    @objc var authState:OIDAuthState?
    
     // MARK:Methods
     
@@ -116,7 +116,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     /*! @fn saveState
      @brief Saves the @c OIDAuthState to @c NSUSerDefaults.
      */
-    func saveState(){
+    @objc func saveState(){
         // for production usage consider using the OS Keychain instead
         if authState != nil{
             let archivedAuthState = NSKeyedArchiver.archivedData(withRootObject: authState!)
@@ -131,7 +131,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     /*! @fn loadState
      @brief Loads the @c OIDAuthState from @c NSUSerDefaults.
      */
-    func loadState(){
+    @objc func loadState(){
         // loads OIDAuthState from NSUSerDefaults
         guard let archivedAuthState = UserDefaults.standard.object(forKey: kAppAuthExampleAuthStateKey) as? Data else{
             return
@@ -142,7 +142,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
         assignAuthState(authState)
     }
     
-    func assignAuthState(_ authState:OIDAuthState?){
+    @objc func assignAuthState(_ authState:OIDAuthState?){
         self.authState = authState
         self.authState?.stateChangeDelegate = self
         self.stateChanged()
@@ -151,7 +151,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
     /*! @fn updateUI
      @brief Refreshes UI, typically called after the auth state changed.
      */
-    func updateUI(){
+    @objc func updateUI(){
         // dynamically changes authorize button text depending on authorized state
         if authState != nil {
             userinfoButton.isEnabled = authState!.isAuthorized
@@ -173,7 +173,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
         }
     }
     
-    func stateChanged(){
+    @objc func stateChanged(){
         self.saveState()
         self.updateUI()
     }
@@ -390,7 +390,7 @@ class ViewController: UIViewController, OIDAuthStateChangeDelegate, OIDAuthState
      @brief Logs a message to stdout and the textfield.
      @param format The format string
      */
-    func logMessage(_ message:String){
+    @objc func logMessage(_ message:String){
         // outputs to stdout
         print(message)
         
